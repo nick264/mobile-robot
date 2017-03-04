@@ -18,7 +18,6 @@ call(["mkdir", "tmp-media"])
 camera = PiCamera()
 camera.rotation = 180
 
-
 # set up pins
 servo1_pin = 22
 servo2_pin = 23
