@@ -82,6 +82,7 @@ class PanTilt:
   def __init__(self):
     self.degree1 = 90
     self.degree2 = 90
+    self.dontPerformNextMovementBefore = None
     
     # set up pins
     servo1_pin = 22
@@ -97,7 +98,23 @@ class PanTilt:
     self.servo1.start(14)
     self.servo2.start(14)
   
-  def setMotors(self):
+  # call this before performing an event to make sure that we've waited an appropriate amount of time
+  def waitUntilDoneMoving(self):
+    now = time.time()
+        
+    if self.dontPerformNextMovementBefore:
+      if self.dontPerformNextMovementBefore > now:
+        time.sleep(self.dontPerformNextMovementBefore - now)
+      
+  def setMotors(self,panAngle,tiltAngle):
+    self.waitUntilDoneMoving()    
+    maxAngleChange = max(abs(panAngle - self.degree1),abs(tiltAngle - self.degree2))
+    waitTime = maxAngleChange / 180.0 * 0.8 # wait 0.6s for every 180 degrees
+    self.dontPerformNextMovementBefore = time.time() + waitTime
+    
+    self.degree1 = panAngle
+    self.degree2 = tiltAngle
+    
     duty_cycle1 = ( self.degree1 * 0.01 + 0.5) / 10 * 100
     duty_cycle2 = ( self.degree2 * 0.01 + 0.5) / 10 * 100
     
@@ -106,24 +123,16 @@ class PanTilt:
   
   def pan(self,leftOrRight):
     if leftOrRight:
-      self.degree1 += 15
+      self.setMotors(self.degree1+15,self.degree2)
     else:
-      self.degree1 -= 15
-    self.setMotors()
+      self.setMotors(self.degree1-15,self.degree2)
   
   def tilt(self,upOrDown):
     if upOrDown:
-      self.degree2 -= 15
+      self.setMotors(self.degree1,self.degree2-15)
     else:
-      self.degree2 += 15
-    self.setMotors()
-  
-  def setAngles(self,panAngle,tiltAngle):
-    self.degree1 = panAngle
-    self.degree2 = tiltAngle
-    self.setMotors()
-    time.sleep(0.3) # wait for motors to adjust
-  
+      self.setMotors(self.degree1,self.degree2+15)
+    
   def pinCleanup(self):
     self.servo1.stop()
     self.servo2.stop()
@@ -141,23 +150,24 @@ class FindFace:
     return self.df.detect(filename)
   
   def checkForFace(self):
+    self.pt.waitUntilDoneMoving()
     return len(self.getFaceData()['faces']) > 0
   
   def panSearch(self,tiltAngle):
     print("pansearch for tiltangle", tiltAngle)
-    self.pt.setAngles(90,tiltAngle)
+    self.pt.setMotors(90,tiltAngle)
     if self.checkForFace():
       return True 
-    self.pt.setAngles(90 + 15,tiltAngle)
+    self.pt.setMotors(90 + 15,tiltAngle)
     if self.checkForFace():
       return True 
-    self.pt.setAngles(90 - 15,tiltAngle)
+    self.pt.setMotors(90 - 15,tiltAngle)
     if self.checkForFace():
       return True 
-    self.pt.setAngles(90 + 2 * 15,tiltAngle)
+    self.pt.setMotors(90 + 2 * 15,tiltAngle)
     if self.checkForFace():
       return True 
-    self.pt.setAngles(90 - 2 * 15,tiltAngle)
+    self.pt.setMotors(90 - 2 * 15,tiltAngle)
     if self.checkForFace():
       return True     
     return False
@@ -204,15 +214,27 @@ class FindFace:
     moveDegreesX = -1 * ( centerOfGravityPerc[0] - 0.5 ) *  degrees_per_frame
     moveDegreesY = ( centerOfGravityPerc[1] - 0.5 ) *  degrees_per_frame
     
-    self.pt.setAngles(self.pt.degree1 + moveDegreesX, self.pt.degree2 + moveDegreesY)
+    self.pt.setMotors(self.pt.degree1 + moveDegreesX, self.pt.degree2 + moveDegreesY)
     
 
-# print(FindFace().getFaceData())
-
-# print(FindFace().checkForFace())
 FindFace().search()
+
+# print(FindFace().getFaceData())
+# print(FindFace().checkForFace())
+
 # pt = PanTilt()
-# pt.setAngles(90,60)
+# while True:
+#   pt.waitUntilCanPerformNextMovement()
+#   pt.dontPerformNextMovementBefore = time.time() + 1.0
+#   print('time: ', time.time())
+  
+# time.sleep(2.0)
+# pt.setMotors(0,90)
+# pt.setMotors(180,90)
+# pt.setMotors(0,90)
+# pt.setMotors(180,90)
+
+# time.sleep(2.0)
 
 # cc = CameraControl()
 # df = DetectFace()
