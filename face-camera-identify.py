@@ -3,14 +3,14 @@ import cv2
 # camera lib
 from picamera import PiCamera
 
-# gpio lib
-import RPi.GPIO as GPIO
-
 # other libs
 import time
 import sys,tty,termios
 from subprocess import call
 
+# gpio lib
+import pigpio
+# call('sudo pigpiod')
 
 #keyboard input
 class Getch:
@@ -85,19 +85,13 @@ class PanTilt:
     self.dontPerformNextMovementBefore = None
     
     # set up pins
-    servo1_pin = 22
-    servo2_pin = 23
-    
-    GPIO.setmode(GPIO.BCM)
-    
-    GPIO.setup(servo1_pin,GPIO.OUT)
-    GPIO.setup(servo2_pin,GPIO.OUT)
-    
-    self.servo1 = GPIO.PWM(servo1_pin, 100)
-    self.servo2 = GPIO.PWM(servo2_pin, 100)
-    self.servo1.start(14)
-    self.servo2.start(14)
-  
+    self.servo1_pin = 22
+    self.servo2_pin = 23
+
+    self.pins = pigpio.pi()
+    self.pins.set_PWM_frequency(self.servo1_pin,100)
+    self.pins.set_PWM_frequency(self.servo2_pin,100)
+      
   # call this before performing an event to make sure that we've waited an appropriate amount of time
   def waitUntilDoneMoving(self):
     now = time.time()
@@ -115,11 +109,14 @@ class PanTilt:
     self.degree1 = panAngle
     self.degree2 = tiltAngle
     
-    duty_cycle1 = ( self.degree1 * 0.01 + 0.5) / 10 * 100
-    duty_cycle2 = ( self.degree2 * 0.01 + 0.5) / 10 * 100
+    duty_cycle1 = ( self.degree1 * 0.01 + 0.6) / 10 # percentage
+    duty_cycle2 = ( self.degree2 * 0.01 + 0.6) / 10 # percentage
+
+    self.pins.set_PWM_dutycycle(self.servo1_pin,duty_cycle1 * 255.0)
+    self.pins.set_PWM_dutycycle(self.servo2_pin,duty_cycle2 * 255.0)
     
-    self.servo1.ChangeDutyCycle(duty_cycle1)
-    self.servo2.ChangeDutyCycle(duty_cycle2)
+    # self.servo1.ChangeDutyCycle(duty_cycle1)
+    # self.servo2.ChangeDutyCycle(duty_cycle2)
   
   def pan(self,leftOrRight):
     if leftOrRight:
@@ -173,7 +170,7 @@ class FindFace:
     return False
   
   def search(self):
-    if self.panSearch(80) or self.panSearch(75) or self.panSearch(60):
+    if self.panSearch(90) or self.panSearch(75) or self.panSearch(60):
       self.centerFace()
     else:
       return False
