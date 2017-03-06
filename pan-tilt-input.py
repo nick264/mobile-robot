@@ -67,9 +67,9 @@ def get():
   elif k == 'i':
     return 'stop recording'    
   else:
-    print "unhandled key: "
-    print k
-    print "\n"
+    print("unhandled key: ")
+    print(k)
+    print("\n")
     return k
     terminateProgram()
 
@@ -99,7 +99,7 @@ try:
 
     key = get()
     
-    print key
+    print(key)
     
     if key == 'up':
       degree2 -= 15
