@@ -87,10 +87,11 @@ class PanTilt:
     # set up pins
     self.servo1_pin = 22
     self.servo2_pin = 23
+    self.pwmFrequency = 100
 
     self.pins = pigpio.pi()
-    self.pins.set_PWM_frequency(self.servo1_pin,100)
-    self.pins.set_PWM_frequency(self.servo2_pin,100)
+    self.pins.set_PWM_frequency(self.servo1_pin,self.pwmFrequency)
+    self.pins.set_PWM_frequency(self.servo2_pin,self.pwmFrequency)
       
   # call this before performing an event to make sure that we've waited an appropriate amount of time
   def waitUntilDoneMoving(self):
@@ -109,8 +110,8 @@ class PanTilt:
     self.degree1 = panAngle
     self.degree2 = tiltAngle
     
-    duty_cycle1 = ( self.degree1 * 0.01 + 0.6) / 10 # percentage
-    duty_cycle2 = ( self.degree2 * 0.01 + 0.6) / 10 # percentage
+    duty_cycle1 = ( self.degree1 * 0.01 + 0.6) / ( 1000 / self.pwmFrequency ) # fraction 0-1.0
+    duty_cycle2 = ( self.degree2 * 0.01 + 0.6) / ( 1000 / self.pwmFrequency ) # fraction 0-1.0
 
     self.pins.set_PWM_dutycycle(self.servo1_pin,duty_cycle1 * 255.0)
     self.pins.set_PWM_dutycycle(self.servo2_pin,duty_cycle2 * 255.0)
