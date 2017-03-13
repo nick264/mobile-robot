@@ -104,7 +104,7 @@ class PanTilt:
   def setMotors(self,panAngle,tiltAngle):
     self.waitUntilDoneMoving()    
     maxAngleChange = max(abs(panAngle - self.degree1),abs(tiltAngle - self.degree2))
-    waitTime = maxAngleChange / 180.0 * 0.8 # wait 0.6s for every 180 degrees
+    waitTime = maxAngleChange / 180.0 * 1.0 # wait 0.6s for every 180 degrees
     self.dontPerformNextMovementBefore = time.time() + waitTime
     
     self.degree1 = panAngle
@@ -171,7 +171,7 @@ class FindFace:
     return False
   
   def search(self):
-    if self.panSearch(90) or self.panSearch(75) or self.panSearch(60):
+    if self.panSearch(75) or self.panSearch(60) or self.panSearch(90):
       self.centerFace()
     else:
       return False
@@ -221,17 +221,14 @@ FindFace().search()
 # print(FindFace().checkForFace())
 
 # pt = PanTilt()
-# while True:
-#   pt.waitUntilCanPerformNextMovement()
-#   pt.dontPerformNextMovementBefore = time.time() + 1.0
-#   print('time: ', time.time())
+# pt.setMotors(50,70)
   
 # time.sleep(2.0)
-# pt.setMotors(0,90)
-# pt.setMotors(180,90)
-# pt.setMotors(0,90)
-# pt.setMotors(180,90)
-
+# pt.setMotors(90,90)
+# pt.setMotors(90,140)
+# pt.setMotors(90,90)
+# pt.setMotors(90,50)
+# pt.setMotors(90,90)
 # time.sleep(2.0)
 
 # cc = CameraControl()

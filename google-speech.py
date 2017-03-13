@@ -2,11 +2,11 @@ import os
 import speech_recognition as sr
 from google.cloud import speech
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'API-Project-c7afe5505e44.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'google-creds/API-Project-c7afe5505e44.json'
 
 # Record Audio
 r = sr.Recognizer()
-with sr.Microphone(sample_rate = 16000) as source:
+with sr.Microphone() as source:
     print("Say something!")
     audio = r.listen(source)
 
@@ -22,7 +22,7 @@ audio_sample = speech_client.sample(
     audio.get_raw_data(),
     source_uri=None,
     encoding='LINEAR16',
-    sample_rate=16000)
+    sample_rate=44100)
 
 
 # Detects speech in the audio file
