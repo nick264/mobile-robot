@@ -2,7 +2,7 @@ import os
 import speech_recognition as sr
 from google.cloud import speech
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'google-creds/API-Project-c7afe5505e44.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'creds/API-Project-c7afe5505e44.json'
 
 # Record Audio
 r = sr.Recognizer()
