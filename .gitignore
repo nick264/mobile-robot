@@ -1,3 +1,3 @@
-tmp-media/
-creds/
+.DS_Store
 *.pyc
+creds/*.pyc
