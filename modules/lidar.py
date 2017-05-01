@@ -2,31 +2,37 @@ import time
 import RPi.GPIO as GPIO
 import serial
 import sys
+import csv
+import os
+import pygame
+import math
 
 PI = 3.14159265
 
 class Lidar:
-  def __init__():
+  def __init__(self):
     self.serial_rx_pin     = 15
-    self.motor_trigger_pin = 17
+    self.motor_trigger_pin = 26
     
     # configure serial read
     self.serial = serial.Serial('/dev/ttyAMA0', 115200) #Tried with and without the last 3 parameters, and also at 1Mbps, same happens.
 
     # configure GPIO
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(17, GPIO.OUT, initial=GPIO.LOW)
+    GPIO.setup(self.motor_trigger_pin, GPIO.OUT, initial=GPIO.LOW)
 
     # configure display
-    self.display_width            = 1024
-    self.display_height           = 768
-    self.display_pixels_per_meter = 100
-
+    self.display_width            = 480
+    self.display_height           = 320
+    self.display_pixels_per_meter = 50
+    os.putenv('SDL_FBDEV', '/dev/fb1') # output to LCD touchscreen
+    pygame.init()
+    self.screen = pygame.display.set_mode((self.display_width,self.display_height))
 
   def terminate(self):
     sys.stdout.write("Closing serial port...")
-    ser.flushInput()
-    ser.close()
+    self.serial.flushInput()
+    self.serial.close()
     sys.stdout.write("done\n")
     GPIO.cleanup()  
 
@@ -37,12 +43,12 @@ class Lidar:
     good_sets = 0
     bad_sets = 0
     
-    # print all the data
-    for i in xrange(len(data) / 22):
-      for j in xrange(22):
-        sys.stdout.write(hex(ord(data[i*22 + j])))
-        sys.stdout.write(" ")
-      sys.stdout.write("\n")
+    # # print all the data
+    # for i in xrange(len(data) / 22):
+    #   for j in xrange(22):
+    #     sys.stdout.write(hex(ord(data[i*22 + j])))
+    #     sys.stdout.write(" ")
+    #   sys.stdout.write("\n")
     
     processed_data = []
     
@@ -79,42 +85,52 @@ class Lidar:
     print("good_sets = ", good_sets)
     print("bad_sets = ", bad_sets)
     
-    print("Processed data:")
-    for i in xrange(len(processed_data)):
-      for j in xrange(len(processed_data[i])):
-        sys.stdout.write("%s " % processed_data[i][j])
-      sys.stdout.write("\n")
+    # print("Processed data:")
+    # for i in xrange(len(processed_data)):
+    #   for j in xrange(len(processed_data[i])):
+    #     sys.stdout.write("%s " % processed_data[i][j])
+    #   sys.stdout.write("\n")
+    return processed_data
   
   def startReading(self):
     try:
       # turn on motor
       sys.stdout.write("Turning on motor...\n")
-      GPIO.output(17, GPIO.HIGH)
+      GPIO.output(self.motor_trigger_pin, GPIO.HIGH)
       time.sleep(2)
       
       # reading 
       sys.stdout.write("Reading data...\n")
-      ser.flushInput()
+      self.serial.flushInput()
       
       cycles_read = 0
       while True:
-          bytesToRead = ser.inWaiting()
+          bytesToRead = self.serial.inWaiting()
           
           if bytesToRead > 0:
-            byte = ser.read(1)
+            byte = self.serial.read(1)
             
             if ord(byte) == 0xFA:
               # sys.stdout.write("got a new packet\n")  
               
-              index_byte = ser.read(1)
+              index_byte = self.serial.read(1)
               
               if ord(index_byte) == 0xA0:
                 sys.stdout.write("Got beginning of rotation\n")
                 
-                if cycles_read > 10:
-                  processRotation(byte + index_byte + ser.read(1978))
-                  terminate()
-                  break
+                # process and display data
+                data = self.processRotation(byte + index_byte + self.serial.read(1978))
+                self.displayData(data)
+                
+                # process pygame event loop                
+                for event in pygame.event.get():
+                  if event.type == pygame.QUIT:
+                    print("got quit event")
+                    self.terminate()
+                  if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+                    print("got q keyboard press")
+                    pygame.quit()
+                    self.terminate()
                 
                 cycles_read += 1
                 print("read cycle")
@@ -128,26 +144,38 @@ class Lidar:
             # sys.stdout.write(hex(ord(data)))
             sys.stdout.flush()
     except KeyboardInterrupt:
-      terminate()
+      self.terminate()
   
-  def displayData(self):
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH,HEIGHT))
-    screen.fill((30,30,30))
+  def displayData(self,data):
+    self.screen.fill((15,15,15))
+    self.plotData(data)
+    pygame.display.flip()
 
+  def testData(self):
+    retData = []
+    with open('./media/lidar-measurements.csv','rU')  as  csvfile:
+      for row in csv.reader(csvfile,dialect=csv.excel,delimiter=',', quotechar='"'):
+        fixed_data = list(map(lambda x: float(x.replace("\ufeff","")),row))
+        retData.append(fixed_data)
+    return retData
   
-  def plotData(self,data,screen):
+  def plotData(self,data):
     for d in data:
+      print(d)
       # skip if error
       if d[4] > 0:
         continue
       
       distance = d[3]
       degree   = d[0] * 4 + d[2]
-      rad      = degree/360 * 2 * PI
+      rad      = degree/360.0 * 2.0 * PI
       
-      x = self.display_width/2 + math.sin(rad) * distance / 1000 * self.display_pixels_per_meter
-      y = self.display_height/2 + math.cos(rad) * distance / 1000 * self.display_pixels_per_meter
+      x = self.display_width/2.0 + ( math.sin(rad) * distance / 1000.0 * self.display_pixels_per_meter )
+      y = self.display_height/2.0 + ( math.cos(rad) * distance / 1000.0 * self.display_pixels_per_meter )
       
       print((x,y))
-      screen.set_at((int(round(x)),int(round(y))),(0,0,255))
+      
+      self.screen.set_at((int(round(x)),int(round(y))),(190,190,255))
+
+# l = Lidar()
+# l.startReading()
